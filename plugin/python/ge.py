@@ -55,18 +55,22 @@ def _fetchCodeBlock():
 
 def DoGen():
     s, e = _fetchCodeBlock()
-    # print("S = {},E = {}".format(s, e))
     codeb = "\n".join(vim.current.buffer[s+1:e])
+
+    # print("S = {},E = {}".format(s, e))
     # print("Graph Code Block is\n{}\n".format(codeb))
+
     if codeb is None:
         sys.stderr.write("Can't find graph")
         return
     graph = _callExternal(codeb)
     if graph is None:
         return
+
     # Clear the range and append the graph
     r = vim.current.buffer.range(s, e+1)
     r[:] = None
+    r.append("")
     r.append("{{{")
     for line in graph.split("\n"):
         r.append(line)

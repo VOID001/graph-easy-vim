@@ -5,6 +5,8 @@ py3 sys.path.insert(0, os.path.join("/home/void001/Projects/VimProjects/graph-ea
 py3 import ge
 py3 importlib.reload(ge)
 
-function! GraphGen()
+function GraphGen()
     py3 ge.DoGen()
 endfunction
+
+nmap <Leader>gg :call GraphGen()<CR>

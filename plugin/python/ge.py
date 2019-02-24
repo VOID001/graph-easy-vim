@@ -4,6 +4,11 @@ import sys
 import subprocess
 import shlex
 
+
+def _vimerr(errmsg):
+    sys.stderr.write(errmsg)
+
+
 def _fetchCodeBlock():
     buf = vim.current.buffer
     r, c = vim.current.window.cursor
@@ -19,14 +24,14 @@ def _fetchCodeBlock():
     savebuf = buf[:r]
     for idx, line in enumerate(savebuf[::-1]):
         if line.rstrip() == "\endgraph":
-            sys.stderr.write("Please locate cursor in the graph block")
+            _vimerr("Please locate cursor INSIDE the graph block")
             return None
         if line.rstrip() == "\graph":
             start = r - idx - 1
             break
 
     if start == -1:
-        sys.stderr.write("Can't find graph")
+        _vimerr("Can't find graph")
         return None
 
     # print("Graph start at {}".format(start))
@@ -37,7 +42,7 @@ def _fetchCodeBlock():
             beginCapture = True
             continue
         if line.rstrip() == "\graph" and beginCapture:
-            sys.stderr.write("Nesting graph is not allowed")
+            _vimerr("Nesting graph is not allowed")
             return
         if line.rstrip() == "\endgraph" and beginCapture:
             finishCapture = True
@@ -47,21 +52,24 @@ def _fetchCodeBlock():
             graphCodeBuf = graphCodeBuf + "\n" + line
 
     if not finishCapture:
-        sys.stderr.write("Can't find End Of Graph {}".format("\\endgraph"))
+        _vimerr("Can't find End Of Graph {}".format("\\endgraph"))
         return
 
     return (start, end)
 
 
 def DoGen():
-    s, e = _fetchCodeBlock()
+    ret = _fetchCodeBlock()
+    if ret is None:
+        return
+    s, e = ret
     codeb = "\n".join(vim.current.buffer[s+1:e])
 
     # print("S = {},E = {}".format(s, e))
     # print("Graph Code Block is\n{}\n".format(codeb))
 
     if codeb is None:
-        sys.stderr.write("Can't find graph")
+        _vimerr("Can't find graph")
         return
     graph = _callExternal(codeb)
     if graph is None:
@@ -88,14 +96,14 @@ def _callExternal(buf):
         out, err = proc.communicate(bytes(buf, "UTF-8"), timeout=2)
         if proc.returncode != 0:
             errmsg = "graph-easy call error, {}".format(err.decode("UTF-8"))
-            sys.stderr.write(errmsg)
+            _vimerr(errmsg)
             proc.stdin.close()
             proc.wait()
             return None
         proc.stdin.close()
     except subprocess.TimeoutExpired:
         proc.kill()
-        sys.stderr.write("graph-easy call time out")
+        _vimerr("graph-easy call time out")
         return None
     proc.wait()
     return str(out, "UTF-8")
